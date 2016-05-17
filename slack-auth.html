@@ -252,6 +252,8 @@ slack-auth depends only on Google polymer components, they include:
               +this.clientSecret
               +"&team="
               +this.team
+              +"&redirect_uri="
+              +this.callback
               +"&state=client"
               +"&scope=client");
           } else if (!this.code || this.code.length < 1) {

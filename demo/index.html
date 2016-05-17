@@ -6,7 +6,7 @@
       <title>slack-auth demo</title>
       <script src="../bower_components/webcomponentsjs/webcomponents-lite.min.js"></script>
       <link rel="import" href="../bower_components/firebase-login/firebase-login.html">
-      <link rel="import" href="slack-auth.html">
+      <link rel="import" href="../slack-auth.html">
 
 
       <style is="custom-style" include="demo-pages-shared-styles">
@@ -18,16 +18,20 @@
     <body unresolved>
       <template is="dom-bind">
         <app-header condenses fixed effects="resize-title blend-background waterfall">
-          <span>Authenticate with Slack RTM API.</span>
+        <span>Authenticate with Slack RTM API.<span>{{status}}</span></span>
         </app-header>
         <firebase-login
-          firebase-root="https://heka-house.firebaseio.com"></firebase-login>
+          firebase-root="https://heka-house-polymer-demos.firebaseio.com"
+          is-anonymous></firebase-login>
         <slack-auth
-          path="slack-auth"
           team="hekahouse"
-          callback="https://heka-house-polymer-demos.firebaseio.com/slack-auth"
-          client-id-path="https://heka-house.firebaseio.com/secured/slack-id"
-          client-secret-path="https://heka-house.firebaseio.com/secured/slack-secret"></slack-auth>
+          callback="https://heka-house-polymer-demos.firebaseapp.com/slack-auth/demo/"
+          client-id-path="https://heka-house-polymer-demos.firebaseio.com/secured/slack-client"
+          client-secret-path="https://heka-house-polymer-demos.firebaseio.com/secured/slack-secret"
+          connection-status="{{status}}"
+          path="/slack-auth/demo/"
+          auto></slack-auth>
+
     </template>
   </body>
   </html>

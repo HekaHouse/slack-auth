@@ -3,7 +3,7 @@
 <link rel="import" href="../iron-ajax/iron-ajax.html">
 <link rel="import" href="../firebase-element/firebase-document.html">
 <link rel="import" href="../app-route/app-location.html">
-<link rel="import" href="../app-route/app-route.html">
+
 <!--
 # slack-auth
 
@@ -64,6 +64,9 @@ slack-auth depends only on Google polymer components, they include:
 
 ## Related
 
+@group HekaHouse
+@element firebase-card
+@demo demo/index.html
 -->
 
 <dom-module id="slack-auth">
@@ -74,29 +77,22 @@ slack-auth depends only on Google polymer components, they include:
       }
     </style>
     <app-location route="{{route}}"></app-location>
-    <app-route
-        route="{{route}}"
-        pattern="/:page"
-        queryParams="{{coded}}"
-        data="{{routeData}}">
-    </app-route>
-    </app-route>
+
     <iron-ajax
           url="https://slack.com/api/oauth.access"
           id="accessAjax"
           method="POST"
           handle-as="json"
-          params="{{ajaxBody}}"
           last-response="{{access}}"
           debounce-duration="300"></iron-ajax>
     <firebase-document
       id="slackClient"
       location="{{clientIdPath}}"
-      data="{{clientId}}"></firebase-document>
+      data="{{clientId}}" log></firebase-document>
     <firebase-document
       id="slackSecret"
       location="{{clientSecretPath}}"
-      data="{{clientSecret}}"></firebase-document>
+      data="{{clientSecret}}" log></firebase-document>
     <iron-signals on-iron-signal-slack-access-granted="_accessGranted"></iron-signals>
     <iron-signals on-iron-signal-slack-connect-init="_initAuth"></iron-signals>
   </template>
@@ -113,9 +109,13 @@ slack-auth depends only on Google polymer components, they include:
           access: {
             type: Object,
             notify: true,
-            observer: '_accessGranted'
+            observer: '_accessResponse'
           },
           accessToken: {
+            type: String,
+            notify: true
+          },
+          path: {
             type: String,
             notify: true
           },
@@ -132,14 +132,17 @@ slack-auth depends only on Google polymer components, they include:
             notify: true
           },
           callback: {
-            type: String
+            type: String,
+            notify: true
           },
           code: {
             type: String,
             notify: true
           },
           route: {
-            type: Object
+            type: Object,
+            notify: true,
+            observer: '_seeRoute'
           },
           subbroute: {
             type: Object
@@ -155,7 +158,8 @@ slack-auth depends only on Google polymer components, they include:
           },
           ajaxBody: {
             type: String,
-            computed: '_processBody(clientId, clientSecret, code, callback)'
+            computed: '_processBody(clientId, clientSecret, code, callback)',
+            observer: 'bodyBuilt'
           },
           clientIdPath: {
             type: String,
@@ -164,7 +168,48 @@ slack-auth depends only on Google polymer components, they include:
           clientSecretPath: {
             type: String,
             notify: true
+          },
+          connectionStatus: {
+            type: String,
+            notify: true,
+            value: "not authorized"
+          },
+          auto: {
+            type: Boolean,
+            value: false,
+            notify: true
+          },
+          pathSeen: {
+            type: Boolean,
+            value: false,
+            notify: true
+          },
+          whenAttached: {
+            type: String,
+            notify: true,
+            value: ""
           }
+        },
+        observers: [
+          '_routed(routeData, path)'
+        ],
+        attached: function() {
+          if (this.auto) {
+            this._autoInit();
+          }
+        },
+        bodyBuilt: function(ajaxBody) {
+          if (this.whenAttached === "triggerAjax") {
+            this.$.accessAjax.params = ajaxBody;
+            this.$.accessAjax.generateRequest();
+          }
+        },
+        //a hack put in place to make app-route work
+        //currently app-route never
+        _seeRoute: function(route) {
+          this.coded = route.__queryParams;
+          this.routeData = route.path;
+          this.pathSeen = true;
         },
         _processBody: function(clientId, clientSecret, code, callback) {
           return {
@@ -174,26 +219,49 @@ slack-auth depends only on Google polymer components, they include:
             "redirect_url":callback
           };
         },
-        _accessGranted: function(access) {
-          this.fire('iron-signal', {name: 'slack-access-granted', data: access.access_token});
+        _accessResponse: function(access) {
+          if (access.ok) {
+            this.fire('iron-signal', {name: 'slack-access-granted', data: access.access_token});
+            this.connectionStatus = "access granted"
+          } else {
+            this.connectionStatus = access.error;
+          }
+
         },
-        _routed: function(routeData) {
-          if (routeData.page === this.path) {
+        _accessGranted: function(access) {
+          this.connectionStatus = "access granted"
+        },
+        _routed: function(routeData, path) {
+
+          if (routeData === path) {
             if (this.coded && this.coded.code) {
               this.code = this.coded.code;
-              this.$.accessAjax.generateRequest();
+              this.whenAttached = 'triggerAjax'
             }
           }
         },
+        _autoInit: function() {
+          if (this.clientId
+            && this.clientSecret
+            && this.team
+            && this.pathSeen
+            && (!this.code || this.code.length < 1)) {
+              window.top.location.replace("https://slack.com/oauth/authorize?client_id="
+              +this.clientId
+              +"&client_secret="
+              +this.clientSecret
+              +"&team="
+              +this.team
+              +"&state=client"
+              +"&scope=client");
+          } else if (!this.code || this.code.length < 1) {
+            setTimeout(this._autoInit.bind(this), 500);
+          } else {
+
+          }
+        },
         _initAuth: function(e, detail, sender) {
-          window.location.replace("https://slack.com/oauth/authorize?client_id="
-          +this.clientId
-          +"&client_secret="
-          +this.clientSecret
-          +"&team="
-          +this.team
-          +"&state=client"
-          +"&scope=client"); //users:read channels:read channels:history mpim:read mpim:history im:read im:history
+           this._autoInit();
         },
         _accessGranted: function(e, detail, sender) {
           this.accessToken = detail;

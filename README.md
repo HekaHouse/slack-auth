@@ -2,7 +2,7 @@
 
 `<slack-auth>` Polymer element for authenticating with Slack RTM API
 
-[API Docs and Demo](https://heka-house-slack-demo.firebaseapp.com/slack-auth)
+[API Docs and Demo](https://heka-house-polymer-demos.firebaseapp.com/slack-auth)
 
 [Source](http://github.com/hekahouse/slack-auth/)
 

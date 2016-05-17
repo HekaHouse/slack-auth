@@ -1,0 +1,204 @@
+<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../iron-signals/iron-signals.html">
+<link rel="import" href="../iron-ajax/iron-ajax.html">
+<link rel="import" href="../firebase-element/firebase-document.html">
+<link rel="import" href="../app-route/app-location.html">
+<link rel="import" href="../app-route/app-route.html">
+<!--
+# slack-auth
+
+`<slack-auth>` Polymer element for authenticating with Slack RTM API
+
+[API Docs and Demo](https://heka-house-slack-demo.firebaseapp.com/auth)
+
+[Source](http://github.com/hekahouse/slack-auth/)
+
+## Install
+
+    bower install --save HekaHouse/slack-auth
+
+## Example
+    <slack-auth
+      path="DISPLAY-ROUTE"
+      team="SLACK-TEAM"
+      callback="OAUTH-CALLBACK-URL"
+      client-id-path="PATH-TO-ID-ON-FIREBASE"
+      client-secret-path="PATH-TO-SECRET-ON-FIREBASE"></slack-auth>
+
+In the above example replace:
+
+DISPLAY-ROUTE - the route used to display this element
+
+SLACK-TEAM - the team you want to connect to
+
+OAUTH-CALLBACK-URL - the OAuth callback you configured for your Slack app (should be full URL of DISPLAY-ROUTE)
+
+PATH-TO-ID-ON-FIREBASE - the Firebase path to Slack client id
+
+PATH-TO-SECRET-ON-FIREBASE - the Firebase path to Slack client secret
+
+## Note
+
+Make sure you have appropriate Firebase rules and authentication set for Slack client id and secret
+
+## Dependencies
+
+Element dependencies are managed via [Bower](http://bower.io/). You can
+install that via:
+
+    npm install -g bower
+
+Then, go ahead and download the element's dependencies:
+
+    bower install
+
+slack-auth depends only on Google polymer components, they include:
+
+[firebase-element](https://heka-house-slack-client-demo.firebaseapp.com/slack-auth)
+
+[app-route](https://github.com/PolymerElements/app-route)
+
+[iron-signals](https://github.com/PolymerElements/iron-signals)
+
+[iron-ajax](https://github.com/PolymerElements/iron-ajax)
+
+## Related
+
+-->
+
+<dom-module id="slack-auth">
+  <template>
+    <style include="shared-styles">
+      :host {
+        display: block;
+      }
+    </style>
+    <app-location route="{{route}}"></app-location>
+    <app-route
+        route="{{route}}"
+        pattern="/:page"
+        queryParams="{{coded}}"
+        data="{{routeData}}">
+    </app-route>
+    </app-route>
+    <iron-ajax
+          url="https://slack.com/api/oauth.access"
+          id="accessAjax"
+          method="POST"
+          handle-as="json"
+          params="{{ajaxBody}}"
+          last-response="{{access}}"
+          debounce-duration="300"></iron-ajax>
+    <firebase-document
+      id="slackClient"
+      location="{{clientIdPath}}"
+      data="{{clientId}}"></firebase-document>
+    <firebase-document
+      id="slackSecret"
+      location="{{clientSecretPath}}"
+      data="{{clientSecret}}"></firebase-document>
+    <iron-signals on-iron-signal-slack-access-granted="_accessGranted"></iron-signals>
+    <iron-signals on-iron-signal-slack-connect-init="_initAuth"></iron-signals>
+  </template>
+
+  <script>
+
+    (function() {
+      'use strict';
+
+      Polymer({
+        is: 'slack-auth',
+
+        properties: {
+          access: {
+            type: Object,
+            notify: true,
+            observer: '_accessGranted'
+          },
+          accessToken: {
+            type: String,
+            notify: true
+          },
+          team: {
+            type: String,
+            notify: true
+          },
+          clientId: {
+            type: String,
+            notify: true
+          },
+          clientSecret: {
+            type: String,
+            notify: true
+          },
+          callback: {
+            type: String
+          },
+          code: {
+            type: String,
+            notify: true
+          },
+          route: {
+            type: Object
+          },
+          subbroute: {
+            type: Object
+          },
+          routeData: {
+            type: Object,
+            notify: true,
+            observer:"_routed"
+          },
+          coded: {
+            type: Object,
+            notify: true
+          },
+          ajaxBody: {
+            type: String,
+            computed: '_processBody(clientId, clientSecret, code, callback)'
+          },
+          clientIdPath: {
+            type: String,
+            notify: true
+          },
+          clientSecretPath: {
+            type: String,
+            notify: true
+          }
+        },
+        _processBody: function(clientId, clientSecret, code, callback) {
+          return {
+            "client_id":clientId,
+            "client_secret":clientSecret,
+            "code":code,
+            "redirect_url":callback
+          };
+        },
+        _accessGranted: function(access) {
+          this.fire('iron-signal', {name: 'slack-access-granted', data: access.access_token});
+        },
+        _routed: function(routeData) {
+          if (routeData.page === this.path) {
+            if (this.coded && this.coded.code) {
+              this.code = this.coded.code;
+              this.$.accessAjax.generateRequest();
+            }
+          }
+        },
+        _initAuth: function(e, detail, sender) {
+          window.location.replace("https://slack.com/oauth/authorize?client_id="
+          +this.clientId
+          +"&client_secret="
+          +this.clientSecret
+          +"&team="
+          +this.team
+          +"&state=client"
+          +"&scope=client"); //users:read channels:read channels:history mpim:read mpim:history im:read im:history
+        },
+        _accessGranted: function(e, detail, sender) {
+          this.accessToken = detail;
+        }
+      });
+    })();
+  </script>
+</dom-module>

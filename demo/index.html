@@ -1,0 +1,33 @@
+  <!doctype html>
+  <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1.0, user-scalable=yes">
+      <title>slack-auth demo</title>
+      <script src="../bower_components/webcomponentsjs/webcomponents-lite.min.js"></script>
+      <link rel="import" href="../bower_components/firebase-login/firebase-login.html">
+      <link rel="import" href="slack-auth.html">
+
+
+      <style is="custom-style" include="demo-pages-shared-styles">
+        app-header span {
+          margin: 16px;
+        }
+      </style>
+    </head>
+    <body unresolved>
+      <template is="dom-bind">
+        <app-header condenses fixed effects="resize-title blend-background waterfall">
+          <span>Authenticate with Slack RTM API.</span>
+        </app-header>
+        <firebase-login
+          firebase-root="https://heka-house.firebaseio.com"></firebase-login>
+        <slack-auth
+          path="slack-auth"
+          team="hekahouse"
+          callback="https://heka-house-polymer-demos.firebaseio.com/slack-auth"
+          client-id-path="https://heka-house.firebaseio.com/secured/slack-id"
+          client-secret-path="https://heka-house.firebaseio.com/secured/slack-secret"></slack-auth>
+    </template>
+  </body>
+  </html>
